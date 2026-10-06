@@ -37,6 +37,8 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
+      - name: Vérification des secrets et des connexions
+        run: npm run check:env
       - run: npm run db:migrate
       - name: Journaux un par un
         run: |

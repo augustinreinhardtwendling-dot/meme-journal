@@ -41,15 +41,28 @@ export interface GtfaOptions {
   };
 }
 
+/**
+ * Accepte la clé seule, ou l'URL RPC complète collée par erreur, et retire espaces et retours à la ligne.
+ */
+export function normalizeHeliusKey(raw: string | undefined): string {
+  const v = (raw ?? "").trim().replace(/^["']|["']$/g, "");
+  const fromUrl = v.match(/api-key=([^&\s]+)/)?.[1];
+  return (fromUrl ?? v).trim();
+}
+
 export class Helius {
   private recent: number[] = [];
+  private readonly apiKey: string;
   calls = 0;
 
   constructor(
-    private readonly apiKey: string,
+    apiKey: string,
     readonly meter: CreditMeter,
     private readonly maxPerSecond = 8,
-  ) {}
+  ) {
+    this.apiKey = normalizeHeliusKey(apiKey);
+    if (!this.apiKey) throw new Error("HELIUS_API_KEY manquante");
+  }
 
   private async throttle() {
     for (;;) {
@@ -82,12 +95,23 @@ export class Helius {
         await sleep(1000 * 2 ** attempt);
         continue;
       }
+      if (res.status === 401 || res.status === 403) {
+        throw new Error(`Helius refuse la clé API (HTTP ${res.status}) : vérifie le secret HELIUS_API_KEY`);
+      }
       if (res.status === 429 || res.status >= 500) {
         lastError = `HTTP ${res.status}`;
         await sleep(Math.min(30_000, 1000 * 2 ** attempt));
         continue;
       }
-      const body = (await res.json()) as { result?: T; error?: { code: number; message: string } };
+      const text = await res.text();
+      let body: { result?: T; error?: { code: number; message: string } };
+      try {
+        body = JSON.parse(text);
+      } catch {
+        lastError = `réponse illisible : ${text.slice(0, 80)}`;
+        await sleep(1000 * 2 ** attempt);
+        continue;
+      }
       if (body.error) {
         // -32005 (nœud en retard) / -32014 (statut de bloc indisponible) : erreurs transitoires
         if ([-32005, -32014].includes(body.error.code)) {
