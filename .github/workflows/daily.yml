@@ -1,0 +1,41 @@
+name: Passage quotidien
+
+on:
+  schedule:
+    # 04:17 UTC (6 h 17 à Paris l'été, 5 h 17 l'hiver). Minute « bizarre » : les crons à :00 sont souvent retardés.
+    - cron: "17 4 * * *"
+  workflow_dispatch:
+    inputs:
+      date:
+        description: "Date du journal (AAAA-MM-JJ). Vide = aujourd'hui."
+        required: false
+      full:
+        description: "Mesurer tous les critères sans s'arrêter à la 1re exclusion (calibrage)"
+        type: boolean
+        default: false
+
+concurrency:
+  group: pipeline
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  journal:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      HELIUS_API_KEY: ${{ secrets.HELIUS_API_KEY }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Schéma de la base à jour
+        run: npm run db:migrate
+      - name: Collecte, tri et score
+        run: npm run pipeline -- --kind daily ${{ inputs.date && format('--date {0}', inputs.date) || '' }} ${{ inputs.full && '--full' || '' }}

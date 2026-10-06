@@ -1,0 +1,45 @@
+name: Backfill (manuel)
+
+on:
+  workflow_dispatch:
+    inputs:
+      from:
+        description: "Premier journal à recalculer (AAAA-MM-JJ)"
+        required: true
+      days:
+        description: "Nombre de jours"
+        required: true
+        default: "7"
+      full:
+        description: "Mesurer tous les critères (calibrage)"
+        type: boolean
+        default: true
+
+concurrency:
+  group: pipeline
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      HELIUS_API_KEY: ${{ secrets.HELIUS_API_KEY }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run db:migrate
+      - name: Journaux un par un
+        run: |
+          for i in $(seq 0 $(( ${{ inputs.days }} - 1 ))); do
+            d=$(date -u -d "${{ inputs.from }} + $i day" +%F)
+            npm run pipeline -- --kind backfill --date "$d" ${{ inputs.full && '--full' || '' }} || echo "::warning::échec pour $d"
+          done

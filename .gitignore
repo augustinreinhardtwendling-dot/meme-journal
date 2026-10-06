@@ -1,0 +1,24 @@
+# Secrets
+.env
+.env*.local
+
+# Dépendances et builds
+node_modules/
+.next/
+out/
+coverage/
+
+# Fichiers de travail du pipeline (exports pour Claude Code)
+work/
+
+# Divers
+.DS_Store
+*.log
+.vercel
+
+# TypeScript / Next.js
+*.tsbuildinfo
+next-env.d.ts
+
+# Réglages Claude locaux (propres à ce PC)
+.claude/settings.local.json
