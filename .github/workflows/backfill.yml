@@ -25,7 +25,8 @@ permissions:
 jobs:
   backfill:
     runs-on: ubuntu-latest
-    timeout-minutes: 300
+    # Limite max des runners GitHub : 6 h. Un jour en mode --full ≈ 25 à 40 min.
+    timeout-minutes: 355
     env:
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
       HELIUS_API_KEY: ${{ secrets.HELIUS_API_KEY }}
