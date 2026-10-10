@@ -68,6 +68,16 @@ export const configSchema = z.object({
     /** Crédits max dépensés sur un seul coin à l'étape B. */
     helius_per_coin_cap: z.number().int().default(600),
   }).prefault({}),
+  metas: z.object({
+    /** Une meta est « saturée » si au moins ce nombre de coins ont bondé sur 7 jours… */
+    saturation_min_bonded_7d: z.number().int().default(25),
+    /** …et que moins de cette part est encore vivante 24 h après. */
+    saturation_max_alive_rate: z.number().default(0.02),
+  }).prefault({}),
+  telegram: z.object({
+    /** Découvert automatiquement au premier message envoyé au bot (pas un secret). */
+    chat_id: z.string().nullable().default(null),
+  }).prefault({}),
 });
 
 export type Config = z.infer<typeof configSchema>;

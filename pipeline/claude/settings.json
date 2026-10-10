@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": ["Read(./work/**)", "Edit(./work/**)", "WebSearch", "WebFetch(domain:*)"],
+    "deny": ["Bash", "PowerShell", "Read(./.env*)", "Edit(./.github/**)", "Edit(./pipeline/**)", "Edit(./lib/**)", "Edit(./app/**)"]
+  },
+  "disableAllHooks": true
+}

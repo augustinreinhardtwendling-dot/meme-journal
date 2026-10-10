@@ -1,5 +1,6 @@
 // Lectures pour l'interface.
 import { db } from "./db";
+import type { Fiche, Watchlist } from "./claude-schema";
 import type { Reason } from "./types";
 
 export interface RunRow {
@@ -85,13 +86,8 @@ export interface RetainedCoin {
   fiche_status: string | null;
 }
 
-/** Contenu d'une fiche (rempli à l'étape 4). */
-export interface FicheContent {
-  catalyseur?: { resume: string; sources?: { titre?: string; url: string }[] };
-  dynamique?: string;
-  pourquoi?: string;
-  peut_remarcher?: { verdict: string; confiance: string; raisonnement: string };
-}
+/** Contenu d'une fiche rédigée par Claude Code (format validé à l'ingestion). */
+export type FicheContent = Fiche;
 
 export async function retainedCoins(runId: number): Promise<RetainedCoin[]> {
   return db()<RetainedCoin[]>`
@@ -144,4 +140,35 @@ export async function monthUsage() {
     select coalesce(sum(helius_credits), 0)::int as credits, count(*)::int as runs, sum(claude_duration_s)::int as claude_seconds
     from runs where started_at >= date_trunc('month', now())`;
   return row;
+}
+
+export async function insightsFor(date: string) {
+  const rows = await db()<{ kind: "watchlist" | "weekly_recap"; content: unknown }[]>`
+    select kind, content from insights where journal_date = ${date}`;
+  return {
+    watchlist: (rows.find((r) => r.kind === "watchlist")?.content ?? null) as Omit<Watchlist, "recap_hebdo"> | null,
+    recap: (rows.find((r) => r.kind === "weekly_recap")?.content ?? null) as NonNullable<Watchlist["recap_hebdo"]> | null,
+  };
+}
+
+export interface MetaDayStat {
+  day: string;
+  meta: string;
+  label: string;
+  kind: string;
+  bonded: number;
+  survived_a: number;
+  retained: number;
+  runners: number;
+  volume_trend: string | null;
+  saturated: boolean;
+}
+
+/** Statistiques quotidiennes des metas sur les `days` derniers jours calculés. */
+export async function metaStats(days = 30): Promise<MetaDayStat[]> {
+  return db()<MetaDayStat[]>`
+    select s.day::text as day, s.meta, m.label, m.kind, s.bonded, s.survived_a, s.retained, s.runners, s.volume_trend, s.saturated
+    from meta_stats s join metas m on m.slug = s.meta
+    where s.day > (select max(day) from meta_stats) - ${days}::int
+    order by s.day`;
 }

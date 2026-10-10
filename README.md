@@ -29,3 +29,23 @@ Voir [.env.example](.env.example) et [docs/COMPTES.md](docs/COMPTES.md). Jamais 
 - `lib/onchain/parse.ts` : lecture des transactions Solana par variations de soldes
 - `app/`, `components/` : site Next.js
 - `db/migrations/` : schéma SQL versionné
+
+## Passages Claude Code (étape 4)
+
+Le workflow quotidien enchaîne trois passages `claude -p` (abonnement Pro, jeton `CLAUDE_CODE_OAUTH_TOKEN`),
+chacun avec sa consigne dans `pipeline/claude/` et des permissions limitées à l'écriture dans `work/` :
+
+1. **classement** de tous les coins bondés par meta (`classement-input.json` → `classement-output.json`) ;
+2. **fiches** des meilleurs retenus avec recherche web (`fiches-input.json` → `fiches-output.json`) ;
+3. **« À surveiller »** (+ récap hebdo le lundi) à partir des statistiques des metas.
+
+Chaque sortie est validée (`lib/claude-schema.ts` : format, sources obligatoires, aucun conseil d'achat/vente)
+puis enregistrée par `npm run claude:ingest`. Une étape en échec n'empêche pas la publication ; les fiches
+manquantes sont retentées au passage suivant (3 essais).
+
+| Commande | Rôle |
+|---|---|
+| `npm run claude:export -- --step classement\|fiches\|watchlist` | Prépare les fichiers lus par Claude Code |
+| `npm run claude:ingest -- --step …` | Valide et enregistre la sortie |
+| `npm run stats` | Statistiques des metas (taux de réussite, tendances, saturation) |
+| `npm run publish -- --dry` | Aperçu du message Telegram |

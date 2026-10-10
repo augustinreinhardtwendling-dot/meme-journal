@@ -27,7 +27,7 @@ const { values: args } = parseArgs({
   },
 });
 
-const journalDate = args.date ?? todayUtc();
+const journalDate = args.date ?? (process.env.JOURNAL_DATE || todayUtc());
 const kind = args.kind ?? "daily";
 const cfg = await loadConfig();
 if (args.full) cfg.stage_b.short_circuit = false;

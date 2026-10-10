@@ -15,7 +15,13 @@
     "test": "vitest run",
     "db:migrate": "tsx --env-file-if-exists=.env.local db/migrate.ts",
     "check:env": "tsx --env-file-if-exists=.env.local scripts/check-env.ts",
-    "pipeline": "tsx --env-file-if-exists=.env.local pipeline/run.ts"
+    "pipeline": "tsx --env-file-if-exists=.env.local pipeline/run.ts",
+    "claude:export": "tsx --env-file-if-exists=.env.local pipeline/claude/export.ts",
+    "claude:ingest": "tsx --env-file-if-exists=.env.local pipeline/claude/ingest.ts",
+    "stats": "tsx --env-file-if-exists=.env.local pipeline/stats.ts",
+    "publish": "tsx --env-file-if-exists=.env.local pipeline/publish.ts",
+    "reanalyze": "tsx --env-file-if-exists=.env.local pipeline/reanalyze.ts",
+    "funnel": "tsx --env-file-if-exists=.env.local pipeline/funnel.ts"
   },
   "dependencies": {
     "@solana/web3.js": "^1.99.0",

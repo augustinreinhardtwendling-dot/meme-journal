@@ -13,6 +13,10 @@ on:
         description: "Mesurer tous les critères sans s'arrêter à la 1re exclusion (calibrage)"
         type: boolean
         default: false
+      skip_collect:
+        description: "Ne pas recalculer le journal (seulement fiches, metas, « À surveiller » et Telegram)"
+        type: boolean
+        default: false
 
 concurrency:
   group: pipeline
@@ -24,10 +28,17 @@ permissions:
 jobs:
   journal:
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 120
     env:
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
       HELIUS_API_KEY: ${{ secrets.HELIUS_API_KEY }}
+      CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      APP_URL: https://meme-journal.vercel.app
+      JOURNAL_DATE: ${{ inputs.date }}
+      # Options communes des passages Claude Code : abonnement (jeton OAuth), aucune commande shell,
+      # écriture limitée au dossier work/ (voir pipeline/claude/settings.json).
+      CLAUDE_FLAGS: --settings pipeline/claude/settings.json --permission-mode dontAsk --permission-prompts none --output-format json
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
@@ -40,4 +51,55 @@ jobs:
       - name: Schéma de la base à jour
         run: npm run db:migrate
       - name: Collecte, tri et score
-        run: npm run pipeline -- --kind daily ${{ inputs.date && format('--date {0}', inputs.date) || '' }} ${{ inputs.full && '--full' || '' }}
+        if: ${{ !inputs.skip_collect }}
+        run: npm run pipeline -- --kind daily ${{ inputs.full && '--full' || '' }}
+
+      # --- Claude Code (abonnement Pro) : chaque étape peut échouer sans bloquer la publication ---
+      - name: Installer Claude Code
+        id: claude
+        if: env.CLAUDE_CODE_OAUTH_TOKEN != ''
+        run: npm install -g @anthropic-ai/claude-code && claude --version
+
+      - name: Préparer le classement des metas
+        run: npm run claude:export -- --step classement
+      - name: Claude Code — classement des metas
+        if: steps.claude.outcome == 'success'
+        continue-on-error: true
+        timeout-minutes: 20
+        run: claude -p "$(cat pipeline/claude/prompt-classement.md)" $CLAUDE_FLAGS --model "${CLAUDE_MODEL:-sonnet}" --max-turns 30 > work/claude-classement.json
+      - name: Enregistrer le classement
+        run: npm run claude:ingest -- --step classement
+
+      - name: Préparer les fiches
+        run: npm run claude:export -- --step fiches
+      - name: Claude Code — fiches
+        if: steps.claude.outcome == 'success'
+        continue-on-error: true
+        timeout-minutes: 35
+        run: claude -p "$(cat pipeline/claude/prompt-fiches.md)" $CLAUDE_FLAGS --model "${CLAUDE_MODEL:-sonnet}" --max-turns 160 > work/claude-fiches.json
+      - name: Enregistrer les fiches
+        run: npm run claude:ingest -- --step fiches
+
+      - name: Statistiques des metas
+        run: npm run stats
+
+      - name: Préparer « À surveiller »
+        run: npm run claude:export -- --step watchlist
+      - name: Claude Code — À surveiller
+        if: steps.claude.outcome == 'success'
+        continue-on-error: true
+        timeout-minutes: 20
+        run: claude -p "$(cat pipeline/claude/prompt-watchlist.md)" $CLAUDE_FLAGS --model "${CLAUDE_MODEL:-sonnet}" --max-turns 50 > work/claude-watchlist.json
+      - name: Enregistrer « À surveiller »
+        run: npm run claude:ingest -- --step watchlist
+
+      - name: Publication et résumé Telegram
+        if: always()
+        run: npm run publish
+
+      - name: Résumé des passages Claude Code
+        if: always() && steps.claude.outcome == 'success'
+        run: |
+          for f in work/claude-*.json; do
+            [ -f "$f" ] && node -e 'const j=JSON.parse(require("fs").readFileSync(process.argv[1],"utf8"));console.log(process.argv[1], "→", j.is_error ? "ERREUR" : "ok", "·", Math.round((j.duration_ms||0)/1000)+" s ·", (j.num_turns??"?")+" tours ·", String(j.result||"").slice(0,200).replace(/\n/g," "))' "$f" || true
+          done

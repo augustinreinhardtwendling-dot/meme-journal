@@ -29,3 +29,17 @@ Test : onglet **Actions** → « Passage quotidien » → **Run workflow**. Le p
 | `AUTH_SECRET` | une longue chaîne aléatoire (je peux t'en générer une) |
 
 4. **Deploy**. L'adresse du site ressemble à `https://meme-journal-xxxx.vercel.app`.
+
+## 4. Fiches Claude Code et résumé Telegram (étape 4)
+
+Deux secrets GitHub de plus (**Settings → Secrets and variables → Actions → New repository secret**) :
+
+| Nom | Comment l'obtenir |
+|---|---|
+| `CLAUDE_CODE_OAUTH_TOKEN` | Dans un terminal : `npx @anthropic-ai/claude-code setup-token`, connexion à ton compte Claude dans le navigateur, puis copie du jeton affiché (valable ~1 an). |
+| `TELEGRAM_BOT_TOKEN` | Dans Telegram, conversation avec **@BotFather** → `/newbot` → un nom → un identifiant finissant par `bot` → copie du jeton. |
+
+Puis envoie **/start** à ton nouveau bot : au passage suivant, le pipeline retrouve la conversation tout seul
+(le `chat_id` est mémorisé dans les réglages, ce n'est pas un secret).
+
+Sans ces secrets, le journal est publié normalement, sans fiches ni message Telegram.

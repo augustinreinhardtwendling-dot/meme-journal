@@ -1,12 +1,13 @@
 import Link from "next/link";
 import { dateLong, dateTime, num, usd } from "@/lib/format";
-import { excludedCoins, retainedCoins, type RunRow } from "@/lib/queries";
+import { excludedCoins, insightsFor, retainedCoins, type RunRow } from "@/lib/queries";
 import { addDays, todayUtc } from "@/lib/window";
 import { CoinCard } from "./coin-card";
 import { ExcludedBlock } from "./excluded-block";
+import { WatchlistBlock, WeeklyRecapBlock } from "./insights-block";
 
 export async function JournalView({ run }: { run: RunRow }) {
-  const [retained, excluded] = await Promise.all([retainedCoins(run.id), excludedCoins(run.id)]);
+  const [retained, excluded, insights] = await Promise.all([retainedCoins(run.id), excludedCoins(run.id), insightsFor(run.journal_date)]);
   const c = run.counts;
   const runners = retained.filter((r) => r.tags.includes("Runner")).length;
   const fichesPending = run.claude_status == null || ["pending", "failed", "quota"].includes(run.claude_status);
@@ -41,7 +42,7 @@ export async function JournalView({ run }: { run: RunRow }) {
             + {num(c?.ghost)} migrations fantômes ignorées. « Vivants » = mcap au-dessus de celle de la migration et plus de 50 k$ de
             volume sur 24 h ; les autres sont écartés pour manipulation (détail dans « Exclus »).
           </li>
-          <li><span className="text-muted">Meta dominante :</span> {run.summary?.dominant_meta ?? <span className="text-muted">classement à venir (étape 4)</span>}</li>
+          <li><span className="text-muted">Meta dominante :</span> {run.summary?.dominant_meta ?? <span className="text-muted">classement pas encore fait</span>}</li>
         </ul>
         {fichesPending && retained.length > 0 && (
           <p className="mt-2 text-xs text-warn">Fiches en attente : elles seront rédigées par Claude Code au prochain passage.</p>
@@ -55,6 +56,9 @@ export async function JournalView({ run }: { run: RunRow }) {
           <p className="rounded-2xl border border-line bg-surface p-4 text-sm text-muted">Aucun coin retenu ce jour-là.</p>
         )}
       </section>
+
+      {insights.watchlist && <WatchlistBlock watchlist={insights.watchlist} />}
+      {insights.recap && <WeeklyRecapBlock recap={insights.recap} />}
 
       <section className="mt-5">
         <ExcludedBlock coins={excluded} />

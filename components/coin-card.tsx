@@ -1,6 +1,7 @@
 import { coinLinks } from "@/lib/solana";
 import { duration, imageUrl, multiple, num, pct, usd, xUrl } from "@/lib/format";
 import type { RetainedCoin } from "@/lib/queries";
+import { FicheView, RerunVerdict } from "./fiche-view";
 
 function Avatar({ src, label }: { src: string | null; label: string }) {
   const url = imageUrl(src);
@@ -47,7 +48,6 @@ export function CoinCard({ coin }: { coin: RetainedCoin }) {
   const athMult = mig && coin.ath_mcap_usd ? coin.ath_mcap_usd / mig : null;
   const nowMult = mig && coin.mcap_usd ? coin.mcap_usd / mig : null;
   const x = xUrl(coin.twitter);
-  const verdict = coin.fiche?.peut_remarcher;
 
   return (
     <article className="rounded-2xl border border-line bg-surface p-4">
@@ -85,40 +85,16 @@ export function CoinCard({ coin }: { coin: RetainedCoin }) {
         <div><dt className="text-muted">Liquidité</dt><dd>{usd(coin.liquidity_usd)}</dd></div>
       </dl>
 
-      {verdict && (
-        <div className="mt-3 rounded-xl border border-line p-3 text-sm">
-          <span className="font-medium">Peut remarcher ? </span>
-          <span>{verdict.verdict}</span>
-          <span className="text-muted"> · confiance {verdict.confiance}</span>
-        </div>
-      )}
-
       {coin.fiche ? (
-        <details className="mt-3 group">
-          <summary className="text-sm font-medium text-accent">Lire la fiche</summary>
-          <div className="mt-2 space-y-3 text-sm leading-relaxed">
-            {coin.fiche.catalyseur && (
-              <section>
-                <h4 className="font-medium">Catalyseur</h4>
-                <p className="text-muted">{coin.fiche.catalyseur.resume}</p>
-              </section>
-            )}
-            {coin.fiche.pourquoi && (
-              <section>
-                <h4 className="font-medium">Pourquoi les gens ont acheté</h4>
-                <p className="text-muted">{coin.fiche.pourquoi}</p>
-              </section>
-            )}
-            {coin.fiche.dynamique && (
-              <section>
-                <h4 className="font-medium">Dynamique</h4>
-                <p className="text-muted">{coin.fiche.dynamique}</p>
-              </section>
-            )}
-          </div>
-        </details>
+        <>
+          <RerunVerdict fiche={coin.fiche} />
+          <FicheView fiche={coin.fiche} />
+        </>
       ) : (
-        coin.description && <p className="mt-3 line-clamp-3 text-sm text-muted">{coin.description}</p>
+        <>
+          {coin.description && <p className="mt-3 line-clamp-3 text-sm text-muted">{coin.description}</p>}
+          <p className="mt-2 text-xs text-warn">Fiche en attente : rédigée par Claude Code au prochain passage.</p>
+        </>
       )}
 
       <nav className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[13px]">

@@ -12,6 +12,12 @@
   --danger: #ff7b72;
   --warn: #e3b341;
   --info: #79c0ff;
+  /* Séries des graphiques (palette catégorielle validée, ordre fixe) */
+  --series-1: #3987e5;
+  --series-2: #d95926;
+  --series-3: #199e70;
+  --series-4: #c98500;
+  --series-5: #d55181;
 }
 
 @media (prefers-color-scheme: light) {
@@ -27,6 +33,11 @@
     --danger: #cf222e;
     --warn: #9a6700;
     --info: #0969da;
+    --series-1: #2a78d6;
+    --series-2: #eb6834;
+    --series-3: #1baf7a;
+    --series-4: #eda100;
+    --series-5: #e87ba4;
   }
 }
 
