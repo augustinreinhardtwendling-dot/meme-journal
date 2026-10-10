@@ -20,7 +20,7 @@ export function computeScore(m: Metrics, migrationMcapUsd: number | null, cfg: C
   parts.top10 = 12 * belowThreshold(m.top10_pct, b.top10_max_pct);
   parts.bundle = 8 * belowThreshold(m.bundle_pct, b.bundle_max_pct);
   parts.insiders = 10 * belowThreshold(m.insiders_pct, b.insiders_max_pct);
-  parts.snipers = 8 * belowThreshold(m.snipers_pct, b.snipers_max_pct);
+  parts.snipers = 8 * belowThreshold(m.snipers_held_pct ?? m.snipers_pct, b.snipers_max_pct);
   parts.holders = 8 * (m.holders == null ? 0.5 : clamp(Math.log10(Math.max(1, m.holders) / b.min_holders) / Math.log10(30)));
   parts.wash = 4 * belowThreshold(m.wash_roundtrip_share, b.wash_max_roundtrip_share);
   const distribution = parts.top10 + parts.bundle + parts.insiders + parts.snipers + parts.holders + parts.wash;

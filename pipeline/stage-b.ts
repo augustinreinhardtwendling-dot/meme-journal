@@ -7,7 +7,7 @@ import { detectInsiders } from "../lib/detection/insiders";
 import { judgeCriterion, isCto, STAGE_B_ORDER, type StageBExtra } from "../lib/detection/judge";
 import { detectBundle, detectSnipers, topBuyers, type LaunchContext } from "../lib/detection/launch";
 import { computeScore, isRunner } from "../lib/scoring";
-import { INCINERATOR, isProgramOwned, PUMP_SUPPLY } from "../lib/solana";
+import { associatedTokenAddress, INCINERATOR, isProgramOwned, PUMP_SUPPLY, TOKEN_2022_PROGRAM, TOKEN_PROGRAM } from "../lib/solana";
 import { emptyMetrics, type Metrics, type Reason, type ReasonCode, type Trade } from "../lib/types";
 import type { CollectedCoin } from "./collect";
 import {
@@ -61,11 +61,18 @@ function baseMetrics(snap: DexSnapshot): Metrics {
 const round = (x: number, d = 2) => Math.round(x * 10 ** d) / 10 ** d;
 const short = (list: { wallet: string; pct: number }[], n = 10) => list.slice(0, n).map((w) => ({ wallet: w.wallet, pct: round(w.pct) }));
 
-async function analyzeCoin(coin: CollectedCoin, snap: DexSnapshot, ctx: Ctx): Promise<Evaluated> {
+export interface AnalyzeOptions {
+  /** Mesures déjà connues (recalcul d'un ancien journal) : reprises telles quelles. */
+  preset?: Partial<Metrics>;
+  /** Critères à ne pas remesurer : on juge sur les valeurs de `preset`. */
+  skip?: ReasonCode[];
+}
+
+export async function analyzeCoin(coin: CollectedCoin, snap: DexSnapshot, ctx: Ctx, opts: AnalyzeOptions = {}): Promise<Evaluated> {
   const { helius, sql, cfg } = ctx;
   const b = cfg.stage_b;
   const meter = ctx.dayMeter.child(cfg.budget.helius_per_coin_cap, coin.mint);
-  const m = baseMetrics(snap);
+  const m: Metrics = { ...baseMetrics(snap), ...opts.preset };
   const extra: StageBExtra = { bondingSeconds: coin.bonding_seconds, prebondTxCount: coin.prebond_tx_count };
   const details: Record<string, unknown> = {};
   const reasons: Reason[] = [];
@@ -158,7 +165,16 @@ async function analyzeCoin(coin: CollectedCoin, snap: DexSnapshot, ctx: Ctx): Pr
       if (!l) return;
       const r = detectSnipers(l.trades, launchCtx(l), b.sniper_window_seconds);
       m.snipers_pct = round(r.pct);
-      details.snipers = { until_slot: r.untilSlot, wallets: short(r.wallets) };
+      // Ce que ces snipers détiennent encore : solde de leurs comptes de token associés (1 crédit / 100 comptes).
+      const programs =
+        coin.token_program === "token-2022" ? [TOKEN_2022_PROGRAM] : coin.token_program === "spl-token" ? [TOKEN_PROGRAM] : [TOKEN_PROGRAM, TOKEN_2022_PROGRAM];
+      const atas = r.wallets.flatMap((w) => programs.map((p) => associatedTokenAddress(w.wallet, coin.mint, p)));
+      const accounts = atas.length
+        ? await helius.getMultipleAccounts<{ data?: { parsed?: { info?: { tokenAmount?: { uiAmount: number | null } } } } }>(atas, "jsonParsed", meter)
+        : [];
+      const held = accounts.reduce((sum, a) => sum + (a?.data?.parsed?.info?.tokenAmount?.uiAmount ?? 0), 0);
+      m.snipers_held_pct = round((held / PUMP_SUPPLY) * 100);
+      details.snipers = { until_slot: r.untilSlot, held_pct: m.snipers_held_pct, wallets: short(r.wallets) };
     },
     insiders: async () => {
       const l = await getLaunch();
@@ -266,7 +282,7 @@ async function analyzeCoin(coin: CollectedCoin, snap: DexSnapshot, ctx: Ctx): Pr
   let partial: string | null = null;
   for (const code of STAGE_B_ORDER) {
     try {
-      await measure[code]();
+      if (!opts.skip?.includes(code)) await measure[code]();
     } catch (e) {
       if (e instanceof BudgetExceeded && e.message.includes(coin.mint)) {
         partial = `budget du coin atteint pendant « ${code} »`;

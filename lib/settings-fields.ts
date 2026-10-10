@@ -26,7 +26,7 @@ export const SETTINGS_FIELDS: { section: string; title: string; fields: { key: s
       { key: "insiders_max_pct", label: "Insiders max", unit: "%", step: 0.5 },
       { key: "insider_funding_lookback_hours", label: "Recherche des financements", unit: "h" },
       { key: "insider_min_cluster", label: "Taille min. d'un groupe coordonné", unit: "wallets" },
-      { key: "snipers_max_pct", label: "Snipers max", unit: "%", step: 0.5 },
+      { key: "snipers_max_pct", label: "Snipers max (part encore détenue)", unit: "%", step: 0.5 },
       { key: "sniper_window_seconds", label: "Fenêtre des snipers", unit: "s" },
       { key: "dev_sell_min_sold_pct", label: "Dev sell : part vendue minimale", unit: "%" },
       { key: "dev_sell_drop_pct", label: "Dev sell : chute minimale", unit: "%" },

@@ -73,10 +73,16 @@ export function judgeCriterion(code: ReasonCode, m: Metrics, x: StageBExtra, cfg
       return m.bundle_pct != null && m.bundle_pct > b.bundle_max_pct
         ? reason(code, m.bundle_pct, b.bundle_max_pct, `${m.bundle_wallets ?? "?"} wallets ont pris ${fmt(m.bundle_pct)} % dans le bloc de création`)
         : null;
-    case "snipers":
-      return m.snipers_pct != null && m.snipers_pct > b.snipers_max_pct
-        ? reason(code, m.snipers_pct, b.snipers_max_pct, `${fmt(m.snipers_pct)} % de la supply achetée dans les ${b.sniper_window_seconds} premières secondes`)
-        : null;
+    case "snipers": {
+      // On juge sur ce que les snipers détiennent encore ; à défaut de mesure (anciens journaux), sur ce qu'ils ont acheté.
+      const held = m.snipers_held_pct ?? m.snipers_pct;
+      if (held == null || held <= b.snipers_max_pct) return null;
+      const detail =
+        m.snipers_held_pct != null
+          ? `les snipers des ${b.sniper_window_seconds} premières secondes détiennent encore ${fmt(m.snipers_held_pct)} % de la supply (achat : ${fmt(m.snipers_pct ?? 0)} %)`
+          : `${fmt(held)} % de la supply achetée dans les ${b.sniper_window_seconds} premières secondes`;
+      return reason(code, held, b.snipers_max_pct, detail);
+    }
     case "insiders":
       return m.insiders_pct != null && m.insiders_pct > b.insiders_max_pct
         ? reason(code, m.insiders_pct, b.insiders_max_pct, `dev + ${m.insider_wallets ?? "?"} wallets liés : ${fmt(m.insiders_pct)} % de la supply`)

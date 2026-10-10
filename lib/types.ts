@@ -136,7 +136,10 @@ export interface Metrics {
   bundle_wallets: number | null;
   insiders_pct: number | null;
   insider_wallets: number | null;
+  /** Part de la supply achetée par les snipers dans les premières secondes. */
   snipers_pct: number | null;
+  /** Part de la supply que ces snipers détiennent encore au moment de l'analyse. */
+  snipers_held_pct: number | null;
   dev_sold_pct: number | null;
   dev_sell_drop_pct: number | null;
   unique_buyers_prebond: number | null;
@@ -154,7 +157,7 @@ export function emptyMetrics(): Metrics {
   return {
     mcap_usd: null, price_usd: null, volume_24h_usd: null, liquidity_usd: null, ath_mcap_usd: null, ath_at: null,
     txns_24h: null, buyers_24h: null, sellers_24h: null, holders: null, top10_pct: null, bundle_pct: null,
-    bundle_wallets: null, insiders_pct: null, insider_wallets: null, snipers_pct: null, dev_sold_pct: null,
+    bundle_wallets: null, insiders_pct: null, insider_wallets: null, snipers_pct: null, snipers_held_pct: null, dev_sold_pct: null,
     dev_sell_drop_pct: null, unique_buyers_prebond: null, wash_tx_per_wallet: null, wash_roundtrip_share: null,
     dev_launches_30d: null, dev_dead_30d: null, cto_official: null, cto_recovery_multiple: null,
   };

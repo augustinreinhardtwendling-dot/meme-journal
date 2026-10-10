@@ -72,7 +72,7 @@ console.table(funnel);
 // Distribution des métriques pour choisir les seuils
 const q = (xs: number[], p: number) => (xs.length ? xs.sort((a, b) => a - b)[Math.min(xs.length - 1, Math.floor(p * xs.length))] : null);
 const dist: Record<string, unknown> = {};
-for (const k of ["holders", "top10_pct", "bundle_pct", "snipers_pct", "insiders_pct", "dev_sold_pct", "dev_sell_drop_pct", "wash_tx_per_wallet", "wash_roundtrip_share", "dev_launches_30d"] as const) {
+for (const k of ["holders", "top10_pct", "bundle_pct", "snipers_pct", "snipers_held_pct", "insiders_pct", "dev_sold_pct", "dev_sell_drop_pct", "wash_tx_per_wallet", "wash_roundtrip_share", "dev_launches_30d"] as const) {
   const xs = survivors.map((r) => r[k] as number | null).filter((x): x is number => x != null);
   dist[k] = { n: xs.length, p25: q([...xs], 0.25), mediane: q([...xs], 0.5), p75: q([...xs], 0.75), p90: q([...xs], 0.9) };
 }
@@ -104,7 +104,7 @@ function hasMeasure(code: string, m: Metrics, x: { bondingSeconds: number | null
     case "concentration": return m.top10_pct != null;
     case "fast_bond": return x.bondingSeconds != null;
     case "bundle": return m.bundle_pct != null;
-    case "snipers": return m.snipers_pct != null;
+    case "snipers": return m.snipers_held_pct != null || m.snipers_pct != null;
     case "insiders": return m.insiders_pct != null;
     case "dev_sell": return m.dev_sold_pct != null;
     case "serial_dev": return m.dev_launches_30d != null;

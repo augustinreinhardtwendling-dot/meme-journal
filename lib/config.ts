@@ -32,6 +32,7 @@ export const configSchema = z.object({
     insider_candidates: z.number().int().min(1).default(30),
     /** Un financeur avec plus que ce solde est traité comme une plateforme (CEX…), pas une source commune. */
     hub_balance_sol: z.number().default(5000),
+    /** Part de la supply que les snipers des premières secondes détiennent ENCORE. */
     snipers_max_pct: z.number().default(15),
     sniper_window_seconds: z.number().default(5),
     /** Nombre de premières transactions de la curve analysées (création + premiers trades). */
@@ -46,7 +47,8 @@ export const configSchema = z.object({
     top10_max_pct: z.number().default(30),
     fast_bond_minutes: z.number().default(10),
     fast_bond_min_buyers: z.number().int().default(150),
-    wash_max_tx_per_wallet: z.number().default(8),
+    // 15 (et non 8) : les fermes à faux volume sont toutes au-dessus de 20 ; un vrai coin actif peut atteindre 8.
+    wash_max_tx_per_wallet: z.number().default(15),
     wash_max_roundtrip_share: z.number().default(0.5),
     serial_dev_max_launches_30d: z.number().int().default(5),
     serial_dev_dead_share: z.number().default(0.5),

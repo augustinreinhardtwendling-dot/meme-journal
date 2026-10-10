@@ -9,6 +9,7 @@ export const TOKEN_2022_PROGRAM = "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb";
 export const METAPLEX_PROGRAM = "metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s";
 export const SYSTEM_PROGRAM = "11111111111111111111111111111111";
 export const INCINERATOR = "1nc1nerator11111111111111111111111111111111";
+export const ASSOCIATED_TOKEN_PROGRAM = "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL";
 
 /** Supply standard d'un coin pump.fun (1 milliard, 6 décimales). */
 export const PUMP_SUPPLY = 1_000_000_000;
@@ -29,6 +30,15 @@ export function metaplexMetadataPda(mint: string): string {
     program,
   );
   return pda.toBase58();
+}
+
+/** Compte de token associé (ATA) d'un wallet pour un mint, selon le programme de token. */
+export function associatedTokenAddress(owner: string, mint: string, tokenProgram: string): string {
+  const [ata] = PublicKey.findProgramAddressSync(
+    [new PublicKey(owner).toBuffer(), new PublicKey(tokenProgram).toBuffer(), new PublicKey(mint).toBuffer()],
+    new PublicKey(ASSOCIATED_TOKEN_PROGRAM),
+  );
+  return ata.toBase58();
 }
 
 /** Liens publics d'un coin. */
