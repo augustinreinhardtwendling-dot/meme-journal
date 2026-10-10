@@ -29,7 +29,8 @@ export function duration(seconds: number | null | undefined): string {
   if (seconds < 60) return `${seconds} s`;
   if (seconds < 3600) return `${Math.round(seconds / 60)} min`;
   if (seconds < 86400) return `${(seconds / 3600).toLocaleString("fr-FR", { maximumFractionDigits: 1 })} h`;
-  return `${(seconds / 86400).toLocaleString("fr-FR", { maximumFractionDigits: 1 })} j`;
+  if (seconds < 365 * 86400) return `${(seconds / 86400).toLocaleString("fr-FR", { maximumFractionDigits: 1 })} j`;
+  return `${(seconds / (365.25 * 86400)).toLocaleString("fr-FR", { maximumFractionDigits: 1 })} ans`;
 }
 
 export function dateLong(d: string): string {
