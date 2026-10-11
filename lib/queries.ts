@@ -172,3 +172,85 @@ export async function metaStats(days = 30): Promise<MetaDayStat[]> {
     where s.day > (select max(day) from meta_stats) - ${days}::int
     order by s.day`;
 }
+
+// ---------------------------------------------------------------------------
+// Second cerveau : graphe des coins retenus, de leurs metas et de leurs liens
+// ---------------------------------------------------------------------------
+
+/** Metas trop larges pour servir de couleur principale (on préfère la meta la plus précise). */
+export const BROAD_METAS = new Set(["crypto-meta", "actualite", "culture-internet", "celebrite", "animal", "ia", "politique", "sport", "autre"]);
+
+export interface BrainCoin {
+  mint: string;
+  symbol: string | null;
+  name: string | null;
+  image_url: string | null;
+  journal_date: string;
+  score: number | null;
+  tags: string[];
+  ath_mult: number | null;
+  pourquoi: string | null;
+  catalyseur: { identifie: boolean; type: string; resume: string; sources: { titre?: string; url: string }[] } | null;
+  verdict: string | null;
+  metas: { slug: string; label: string; kind: string; parent: string | null }[];
+}
+
+export interface BrainMeta {
+  slug: string;
+  label: string;
+  kind: string;
+  description: string | null;
+  bonded: number;
+  alive: number;
+  retained_hist: number;
+}
+
+export interface BrainLink {
+  a: string;
+  b: string;
+  kind: string;
+  strength: number;
+  explanation: string;
+  source: "regle" | "claude";
+}
+
+export async function brainData(): Promise<{ coins: BrainCoin[]; metas: BrainMeta[]; links: BrainLink[] }> {
+  const sql = db();
+  const coins = await sql<Omit<BrainCoin, "metas">[]>`
+    with official as (
+      select distinct on (journal_date) id from runs where status in ('collected', 'published')
+      order by journal_date, (kind = 'daily') desc, started_at desc),
+    retained as (
+      select distinct on (c.mint) c.mint, c.symbol, c.name, c.image_url, c.journal_date::text as journal_date, e.score, e.tags,
+        e.ath_mcap_usd / nullif(c.migration_mcap_usd, 0) as ath_mult
+      from evaluations e join official o on o.id = e.run_id join coins c on c.mint = e.mint
+      where e.status = 'retained' order by c.mint, c.journal_date desc)
+    select r.*, f.content->>'pourquoi' as pourquoi, f.content->'catalyseur' as catalyseur,
+      f.content->'peut_remarcher'->>'verdict' as verdict
+    from retained r left join fiches f on f.mint = r.mint and f.status = 'done'
+    order by r.journal_date`;
+  const mints = coins.map((c) => c.mint);
+  if (!mints.length) return { coins: [], metas: [], links: [] };
+
+  const metaRows = await sql<{ mint: string; slug: string; label: string; kind: string; parent: string | null }[]>`
+    select distinct cm.mint, m.slug, m.label, m.kind, m.parent from coin_metas cm join metas m on m.slug = cm.meta
+    where cm.mint in ${sql(mints)} and m.slug <> 'autre'`;
+  const byMint = new Map<string, BrainCoin["metas"]>();
+  for (const r of metaRows) {
+    if (!byMint.has(r.mint)) byMint.set(r.mint, []);
+    byMint.get(r.mint)!.push({ slug: r.slug, label: r.label, kind: r.kind, parent: r.parent });
+  }
+  const slugs = [...new Set(metaRows.map((r) => r.slug))];
+  const metas = slugs.length
+    ? await sql<BrainMeta[]>`
+        select m.slug, m.label, m.kind, m.description,
+          coalesce(sum(s.bonded), 0)::int as bonded, coalesce(sum(s.survived_a), 0)::int as alive,
+          coalesce(sum(s.retained), 0)::int as retained_hist
+        from metas m left join meta_stats s on s.meta = m.slug
+        where m.slug in ${sql(slugs)} group by m.slug, m.label, m.kind, m.description`
+    : [];
+  const links = await sql<BrainLink[]>`
+    select mint_a as a, mint_b as b, kind, strength, explanation, source from coin_links
+    where mint_a in ${sql(mints)} and mint_b in ${sql(mints)}`;
+  return { coins: coins.map((c) => ({ ...c, metas: byMint.get(c.mint) ?? [] })), metas, links };
+}

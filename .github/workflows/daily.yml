@@ -76,6 +76,18 @@ jobs:
       - name: Enregistrer les fiches
         run: npm run claude:ingest -- --step fiches
 
+      - name: Second cerveau — liens factuels
+        run: npm run links
+      - name: Préparer les liens de sens
+        run: npm run claude:export -- --step liens
+      - name: Claude Code — liens de sens
+        if: steps.claude.outcome == 'success'
+        continue-on-error: true
+        timeout-minutes: 15
+        run: bash pipeline/claude/run.sh liens 40
+      - name: Enregistrer les liens
+        run: npm run claude:ingest -- --step liens
+
       - name: Statistiques des metas
         run: npm run stats
 

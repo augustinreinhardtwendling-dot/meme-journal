@@ -158,12 +158,34 @@ async function exportWatchlist() {
   console.log(`watchlist : ${stats.length} lignes de stats, ${fiches.length} fiches récentes${isMonday ? ", récap hebdo demandé" : ""}`);
 }
 
+async function exportLiens() {
+  // Coins retenus avec une fiche, pas encore reliés par Claude Code.
+  const catalogue = await sql<Record<string, unknown>[]>`
+    select c.mint, c.symbol, c.name, c.journal_date::text as journal,
+      (select array_agg(m.label order by m.label) from coin_metas cm join metas m on m.slug = cm.meta where cm.mint = c.mint and m.slug <> 'autre') as metas,
+      f.content->'catalyseur'->>'type' as catalyseur_type, f.content->'catalyseur'->>'resume' as catalyseur,
+      left(f.content->>'pourquoi', 400) as pourquoi, left(f.content->'dynamique'->>'resume', 200) as trajectoire,
+      f.links_at is null as nouveau
+    from fiches f join coins c on c.mint = f.mint
+    where f.status = 'done' order by c.journal_date`;
+  const nouveaux = catalogue.filter((c) => c.nouveau).map((c) => c.mint as string);
+  const existants = await sql`
+    select (select symbol from coins where mint = mint_a) as a, (select symbol from coins where mint = mint_b) as b, kind
+    from coin_links where source = 'regle'`;
+  writeFileSync(
+    join(WORK, "liens-input.json"),
+    JSON.stringify({ nouveaux, catalogue: catalogue.map((c) => Object.fromEntries(Object.entries(c).filter(([k]) => k !== "nouveau"))), liens_existants: existants }, null, 1),
+  );
+  console.log(`liens : ${nouveaux.length} nouveau(x) coin(s) à relier, catalogue de ${catalogue.length}`);
+}
+
 mkdirSync(WORK, { recursive: true });
 try {
   if (args.step === "classement") await exportClassement();
   else if (args.step === "fiches") await exportFiches();
   else if (args.step === "watchlist") await exportWatchlist();
-  else throw new Error("--step classement|fiches|watchlist");
+  else if (args.step === "liens") await exportLiens();
+  else throw new Error("--step classement|fiches|watchlist|liens");
 } finally {
   await closeDb();
 }

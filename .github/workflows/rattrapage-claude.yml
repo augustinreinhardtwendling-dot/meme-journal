@@ -59,3 +59,8 @@ jobs:
             npm run stats
             echo "::endgroup::"
           done
+      - name: Second cerveau (liens factuels puis liens de sens de tous les coins)
+        run: |
+          npm run links
+          npm run claude:export -- --step liens && bash pipeline/claude/run.sh liens 60 || true
+          npm run claude:ingest -- --step liens

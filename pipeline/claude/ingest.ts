@@ -13,6 +13,8 @@ import {
   classementOutputSchema,
   ficheSchema,
   fichesOutputSchema,
+  lienSchema,
+  liensOutputSchema,
   nouvelleMetaSchema,
   watchlistSchema,
 } from "../../lib/claude-schema";
@@ -194,11 +196,47 @@ async function ingestWatchlist() {
   console.log(`watchlist : ${watch.narratifs.length} narratifs${recap_hebdo ? " + récap hebdo" : ""}`);
 }
 
+async function ingestLiens() {
+  const id = await runId(sql);
+  const run = claudeRunInfo("liens");
+  await addDuration(sql, id, run.seconds);
+  const input = readJson("liens-input.json") as { nouveaux?: string[]; catalogue?: { mint: string; symbol: string }[] } | null;
+  const nouveaux = new Set(input?.nouveaux ?? []);
+  if (!nouveaux.size) {
+    console.log("liens : aucun nouveau coin à relier");
+    return;
+  }
+  const known = new Map((input?.catalogue ?? []).map((c) => [c.mint, c.symbol]));
+  const out = liensOutputSchema.safeParse(readJson("liens-output.json"));
+  if (!out.success) {
+    console.log(`liens : sortie absente ou invalide${run.quota ? " (quota Claude atteint)" : ""} — nouvel essai au prochain passage`);
+    return;
+  }
+  let saved = 0;
+  let rejected = 0;
+  for (const raw of out.data.liens) {
+    const p = lienSchema.safeParse(raw);
+    if (!p.success || p.data.a === p.data.b || !known.has(p.data.a) || !known.has(p.data.b) || adviceViolations(p.data.explication).length) {
+      rejected++;
+      continue;
+    }
+    const [a, b] = p.data.a < p.data.b ? [p.data.a, p.data.b] : [p.data.b, p.data.a];
+    await sql`insert into coin_links (mint_a, mint_b, kind, strength, explanation, source)
+      values (${a}, ${b}, ${p.data.type}, ${p.data.force}, ${p.data.explication}, 'claude')
+      on conflict (mint_a, mint_b, kind) do update set strength = excluded.strength, explanation = excluded.explanation, created_at = now()`;
+    saved++;
+  }
+  // Les nouveaux coins sont marqués traités même sans lien : « aucun lien » est une réponse valable.
+  await sql`update fiches set links_at = now() where mint in ${sql([...nouveaux])}`;
+  console.log(`liens : ${saved} lien(s) enregistré(s), ${rejected} rejeté(s), ${nouveaux.size} coin(s) traités`);
+}
+
 try {
   if (args.step === "classement") await ingestClassement();
   else if (args.step === "fiches") await ingestFiches();
   else if (args.step === "watchlist") await ingestWatchlist();
-  else throw new Error("--step classement|fiches|watchlist");
+  else if (args.step === "liens") await ingestLiens();
+  else throw new Error("--step classement|fiches|watchlist|liens");
 } catch (e) {
   console.log(`ingestion ${args.step} : erreur ${(e as Error).message}`);
 } finally {

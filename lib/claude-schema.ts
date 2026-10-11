@@ -110,3 +110,15 @@ export function allText(v: unknown): string {
   if (v && typeof v === "object") return Object.values(v).map(allText).join(" ");
   return "";
 }
+
+/** Lien « de sens » entre deux coins retenus, proposé par Claude Code (second cerveau). */
+export const lienSchema = z.object({
+  a: z.string().min(32).max(44),
+  b: z.string().min(32).max(44),
+  type: z.enum(["catalyseur", "ecosysteme", "narratif", "reponse", "celebrite", "autre"]),
+  force: z.number().int().min(1).max(3),
+  explication: z.string().min(15).max(400),
+});
+export type Lien = z.infer<typeof lienSchema>;
+
+export const liensOutputSchema = z.object({ liens: z.array(z.unknown()) });
