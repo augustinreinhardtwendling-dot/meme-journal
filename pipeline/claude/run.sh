@@ -18,3 +18,15 @@ claude -p "$(cat "pipeline/claude/prompt-$step.md")" \
   --model "${CLAUDE_MODEL:-sonnet}" \
   --max-turns "$turns" \
   > "work/claude-$step.json"
+status=$?
+
+# Résumé lisible dans le journal du workflow (durée, tours, début du message de Claude).
+node -e '
+const fs = require("fs");
+const f = process.argv[1];
+let j = {};
+try { j = JSON.parse(fs.readFileSync(f, "utf8")); } catch { console.log(f + " : sortie illisible ou absente"); process.exit(0); }
+const txt = String(j.result ?? "").replace(/\s+/g, " ").slice(0, 300);
+console.log(`${f} : ${j.is_error ? "ERREUR" : "ok"} · ${Math.round((j.duration_ms ?? 0) / 1000)} s · ${j.num_turns ?? "?"} tours · ${j.subtype ?? ""} · ${txt}`);
+' "work/claude-$step.json"
+exit $status

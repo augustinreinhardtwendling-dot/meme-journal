@@ -38,12 +38,18 @@ function readJson(name: string): unknown | null {
 
 /** Résumé du passage Claude Code (sortie --output-format json de la CLI). */
 function claudeRunInfo(step: string) {
-  const info = readJson(`claude-${step}.json`) as { duration_ms?: number; is_error?: boolean; result?: string; num_turns?: number } | null;
+  const info = readJson(`claude-${step}.json`) as { duration_ms?: number; is_error?: boolean; result?: string; num_turns?: number; subtype?: string } | null;
   const text = `${info?.result ?? ""}`;
+  const isError = info?.is_error ?? info == null;
+  // Messages d'abonnement épuisé : « usage limit », « hit your limit », « limit reached… resets at », etc.
+  const quota = /usage limit|rate limit|limit reached|hit your limit|limit will reset|resets? at|quota|out of (extra )?usage/i.test(text);
+  if (isError) console.log(`  passage Claude ${step} en erreur : ${info?.subtype ?? ""} ${text.replace(/s+/g, " ").slice(0, 200)}`);
   return {
     seconds: info?.duration_ms ? Math.round(info.duration_ms / 1000) : 0,
-    isError: info?.is_error ?? info == null,
-    quota: /usage limit|rate limit|limit reached|quota/i.test(text),
+    isError,
+    quota,
+    // Raison courte, conservée dans la fiche en attente pour comprendre l'échec plus tard.
+    detail: isError ? `${info?.subtype ?? "erreur"} : ${text.replace(/s+/g, " ").slice(0, 160)}` : null,
     turns: info?.num_turns ?? null,
   };
 }
@@ -149,7 +155,7 @@ async function ingestFiches() {
 
   // Claude Code n'a pas tourné (jeton absent, étape sautée) : la fiche attend, sans compter de tentative.
   const ran = existsSync(join(WORK, "claude-fiches.json"));
-  const reasonMissing = !ran ? "Claude Code non lancé" : run.quota ? "quota Claude atteint" : run.isError ? "passage Claude Code en échec" : "fiche absente de la sortie";
+  const reasonMissing = !ran ? "Claude Code non lancé" : run.quota ? "quota Claude atteint" : run.isError ? `passage Claude Code en échec (${run.detail})` : "fiche absente de la sortie";
   for (const [mint, symbol] of expected) {
     if (done.has(mint)) continue;
     const err = errors.get(mint) ?? reasonMissing;

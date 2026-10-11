@@ -69,13 +69,19 @@ export async function computeMetaStats(sql: Sql, day: string, cfg: Config) {
       where day = ${day} and meta = ${r.meta}`;
   }
 
-  // Meta dominante du jour : le thème le plus lancé (hors « autre »).
-  const [dom] = await sql<{ label: string; bonded: number; survived_a: number }[]>`
-    select m.label, s.bonded, s.survived_a from meta_stats s join metas m on m.slug = s.meta
-    where s.day = ${day} and m.kind = 'theme' and m.slug <> 'autre'
-    order by s.bonded desc, s.survived_a desc limit 1`;
+  // Meta dominante du jour : le thème qui a le mieux MARCHÉ (retenus, puis encore vivants), pas le plus lancé :
+  // sinon les fermes à faux volume (« Marque / entreprise ») l'emporteraient presque tous les jours.
+  const [dom] = await sql<{ label: string; bonded: number; survived_a: number; retained: number }[]>`
+    select m.label, s.bonded, s.survived_a, s.retained from meta_stats s join metas m on m.slug = s.meta
+    where s.day = ${day} and m.kind = 'theme' and m.slug <> 'autre' and s.bonded >= 3
+    order by s.retained desc, s.survived_a desc, s.bonded desc limit 1`;
   if (dom) {
-    const text = `${dom.label} (${dom.bonded} bondés, ${dom.survived_a} encore vivants)`;
+    const detail = dom.retained
+      ? `${dom.retained} retenu${dom.retained > 1 ? "s" : ""}, ${dom.survived_a} encore vivant${dom.survived_a > 1 ? "s" : ""}, ${dom.bonded} bondés`
+      : dom.survived_a
+        ? `aucun retenu, ${dom.survived_a} encore vivant${dom.survived_a > 1 ? "s" : ""} sur ${dom.bonded} bondés`
+        : `${dom.bonded} bondés, aucun survivant`;
+    const text = `${dom.label} (${detail})`;
     await sql`update runs set summary = coalesce(summary, '{}'::jsonb) || ${sql.json({ dominant_meta: text } as never)} where id = ${run.id}`;
   }
   return { metas: rows.length, dominant: dom?.label ?? null };
