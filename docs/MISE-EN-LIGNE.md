@@ -30,16 +30,15 @@ Test : onglet **Actions** → « Passage quotidien » → **Run workflow**. Le p
 
 4. **Deploy**. L'adresse du site ressemble à `https://meme-journal-xxxx.vercel.app`.
 
-## 4. Fiches Claude Code et résumé Telegram (étape 4)
+## 4. Fiches Claude Code (étape 4)
 
-Deux secrets GitHub de plus (**Settings → Secrets and variables → Actions → New repository secret**) :
+Un secret GitHub de plus (**Settings → Secrets and variables → Actions → New repository secret**) :
 
 | Nom | Comment l'obtenir |
 |---|---|
-| `CLAUDE_CODE_OAUTH_TOKEN` | Dans un terminal : `npx @anthropic-ai/claude-code setup-token`, connexion à ton compte Claude dans le navigateur, puis copie du jeton affiché (valable ~1 an). |
-| `TELEGRAM_BOT_TOKEN` | Dans Telegram, conversation avec **@BotFather** → `/newbot` → un nom → un identifiant finissant par `bot` → copie du jeton. |
+| `CLAUDE_CODE_OAUTH_TOKEN` | Dans un terminal : `npx.cmd @anthropic-ai/claude-code setup-token`, connexion à ton compte Claude dans le navigateur, code collé dans le terminal, puis copie du jeton affiché (valable ~1 an). |
 
-Puis envoie **/start** à ton nouveau bot : au passage suivant, le pipeline retrouve la conversation tout seul
-(le `chat_id` est mémorisé dans les réglages, ce n'est pas un secret).
+Sans ce secret, le journal est publié normalement, sans fiches.
 
-Sans ces secrets, le journal est publié normalement, sans fiches ni message Telegram.
+> Telegram : non utilisé (décision du 11/10/2026). Le code d'envoi reste dans `pipeline/telegram.ts` et ne fait rien tant
+> qu'aucun secret `TELEGRAM_BOT_TOKEN` n'existe.

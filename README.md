@@ -48,4 +48,4 @@ manquantes sont retentées au passage suivant (3 essais).
 | `npm run claude:export -- --step classement\|fiches\|watchlist` | Prépare les fichiers lus par Claude Code |
 | `npm run claude:ingest -- --step …` | Valide et enregistre la sortie |
 | `npm run stats` | Statistiques des metas (taux de réussite, tendances, saturation) |
-| `npm run publish -- --dry` | Aperçu du message Telegram |
+| `npm run publish -- --dry` | Publication à blanc (aperçu du résumé ; Telegram non utilisé) |

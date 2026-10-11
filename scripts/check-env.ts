@@ -59,5 +59,19 @@ async function checkHelius() {
   }
 }
 
+function checkClaudeToken() {
+  const raw = process.env.CLAUDE_CODE_OAUTH_TOKEN;
+  if (!raw) {
+    console.log("CLAUDE_CODE_OAUTH_TOKEN : absent (les fiches ne seront pas rédigées)");
+    return;
+  }
+  const clean = raw.replace(/\s+/g, "");
+  const notes: string[] = [];
+  if (clean.length !== raw.length) notes.push(`${raw.length - clean.length} espace(s) ou retour(s) à la ligne retiré(s) automatiquement`);
+  if (!clean.startsWith("sk-ant-")) notes.push("ne commence pas par sk-ant- : vérifie que c'est bien le jeton de setup-token");
+  console.log(`CLAUDE_CODE_OAUTH_TOKEN : présent (${clean.length} caractères${notes.length ? ` ; ${notes.join(" ; ")}` : ""})`);
+}
+
 await checkDb();
 await checkHelius();
+checkClaudeToken();
