@@ -37,7 +37,7 @@ try {
     for (const r of retained) {
       const mult = r.ath && r.mig ? ` · ATH ×${Math.round(r.ath / r.mig)}` : "";
       const verdict = r.verdict ? ` · remarcher : ${r.verdict}` : "";
-      lines.push(`• $${escapeHtml(r.symbol ?? "?")} — score ${r.score ?? "—"}${mult}${verdict}`);
+      lines.push(`• ${escapeHtml(r.symbol ?? "?")} — score ${r.score ?? "—"}${mult}${verdict}`);
     }
   }
   const narratifs = watch?.content?.narratifs ?? [];

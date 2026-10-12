@@ -38,3 +38,5 @@ Si `lundi_recap_hebdo` est `true`, remplace `null` par :
 - **Aucun conseil d'achat ou de vente.** Tu décris des narratifs à surveiller, tu ne recommandes aucun coin.
 - `metas` : slugs présents dans `stats_metas_7j` (ou liste vide).
 - N'écris que ce fichier. Pas de commandes shell.
+
+Écris les tickers sans « $ » devant (ex. « HIGGS », pas « $HIGGS »).

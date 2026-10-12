@@ -1,3 +1,4 @@
+import { noCashtag } from "@/lib/format";
 import type { FicheContent } from "@/lib/queries";
 
 const APRES_MIGRATION: Record<string, string> = {
@@ -33,7 +34,7 @@ export function RerunVerdict({ fiche }: { fiche: FicheContent }) {
         <span className={`font-semibold ${v.tone}`}>{v.label}</span>
         <span className="text-muted"> · confiance {CONFIANCE[fiche.peut_remarcher.confiance] ?? fiche.peut_remarcher.confiance}</span>
       </div>
-      <p className="mt-1 text-[13px] leading-relaxed text-muted">{fiche.peut_remarcher.raisonnement}</p>
+      <p className="mt-1 text-[13px] leading-relaxed text-muted">{noCashtag(fiche.peut_remarcher.raisonnement)}</p>
     </div>
   );
 }
@@ -47,7 +48,7 @@ export function FicheView({ fiche }: { fiche: FicheContent }) {
       <div className="mt-2 space-y-4 text-sm leading-relaxed">
         <section>
           <h4 className="font-medium">Catalyseur {!c.identifie && <span className="text-xs font-normal text-warn">· non identifié</span>}</h4>
-          <p className="text-muted">{c.resume}</p>
+          <p className="text-muted">{noCashtag(c.resume)}</p>
           {c.sources.length > 0 && (
             <ul className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[12px]">
               {c.sources.map((s) => (
@@ -62,16 +63,16 @@ export function FicheView({ fiche }: { fiche: FicheContent }) {
         </section>
         <section>
           <h4 className="font-medium">Pourquoi les gens ont acheté</h4>
-          <p className="text-muted">{fiche.pourquoi}</p>
+          <p className="text-muted">{noCashtag(fiche.pourquoi)}</p>
         </section>
         <section>
           <h4 className="font-medium">Dynamique</h4>
           <p className="text-[12px] text-muted">
             {APRES_MIGRATION[fiche.dynamique.apres_migration] ?? fiche.dynamique.apres_migration} · {ROLE_DEV[fiche.dynamique.role_dev] ?? fiche.dynamique.role_dev}
           </p>
-          <p className="text-muted">{fiche.dynamique.resume}</p>
-          <p className="mt-1 text-muted">{fiche.dynamique.vitesse_bonding}</p>
-          <p className="mt-1 text-muted">{fiche.dynamique.profil_acheteurs}</p>
+          <p className="text-muted">{noCashtag(fiche.dynamique.resume)}</p>
+          <p className="mt-1 text-muted">{noCashtag(fiche.dynamique.vitesse_bonding)}</p>
+          <p className="mt-1 text-muted">{noCashtag(fiche.dynamique.profil_acheteurs)}</p>
         </section>
         {fiche.faits.length > 0 && (
           <section>
@@ -79,7 +80,7 @@ export function FicheView({ fiche }: { fiche: FicheContent }) {
             <ul className="list-disc space-y-1 pl-5 text-muted">
               {fiche.faits.map((f, i) => (
                 <li key={i}>
-                  {f.texte}{" "}
+                  {noCashtag(f.texte)}{" "}
                   {f.sources.map((u) => (
                     <a key={u} className="text-[12px] text-info" href={u} target="_blank" rel="noreferrer">
                       [{host(u)}]{" "}
@@ -95,7 +96,7 @@ export function FicheView({ fiche }: { fiche: FicheContent }) {
             <h4 className="font-medium">Hypothèses (non vérifiées)</h4>
             <ul className="list-disc space-y-1 pl-5 italic text-muted">
               {fiche.hypotheses.map((h, i) => (
-                <li key={i}>{h}</li>
+                <li key={i}>{noCashtag(h)}</li>
               ))}
             </ul>
           </section>

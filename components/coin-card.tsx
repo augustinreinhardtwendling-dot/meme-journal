@@ -56,7 +56,7 @@ export function CoinCard({ coin }: { coin: RetainedCoin }) {
         <div className="min-w-0 flex-1">
           <div className="flex items-baseline gap-2">
             <h3 className="truncate text-base font-semibold">{coin.name ?? "Sans nom"}</h3>
-            <span className="shrink-0 font-mono text-xs text-muted">${coin.symbol}</span>
+            <span className="shrink-0 font-mono text-xs text-muted">{coin.symbol}</span>
           </div>
           <div className="mt-1 flex flex-wrap gap-1">
             {coin.tags.includes("Runner") && <Tag tone="accent">Runner</Tag>}

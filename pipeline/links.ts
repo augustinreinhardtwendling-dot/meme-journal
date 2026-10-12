@@ -39,7 +39,7 @@ export async function retainedCoins(sql: Sql): Promise<RetainedRef[]> {
 }
 
 const norm = (s: string | null) => (s ?? "").toLowerCase().normalize("NFKD").replace(/[^a-z0-9]/g, "");
-const sym = (c: RetainedRef) => `$${c.symbol ?? "?"}`;
+const sym = (c: RetainedRef) => c.symbol ?? "?";
 const daysBetween = (a: string, b: string) => Math.abs(Date.parse(a) - Date.parse(b)) / 86400_000;
 
 function pairs<T>(xs: T[]): [T, T][] {

@@ -48,7 +48,7 @@ export function ExcludedBlock({ coins }: { coins: ExcludedCoin[] }) {
                     <li key={c.mint} className="py-2">
                       <div className="flex items-baseline justify-between gap-2">
                         <a href={coinLinks(c.mint).dexscreener} target="_blank" rel="noreferrer" className="truncate font-medium">
-                          {c.name ?? "Sans nom"} <span className="font-mono text-xs text-muted">${c.symbol}</span>
+                          {c.name ?? "Sans nom"} <span className="font-mono text-xs text-muted">{c.symbol}</span>
                         </a>
                         <span className="tabular shrink-0 text-xs text-muted">{usd(c.mcap_usd)}</span>
                       </div>

@@ -18,6 +18,8 @@ Pour **chaque coin de `nouveaux`**, cherche dans le `catalogue` les coins avec l
 Ne relie PAS deux coins juste parce qu'ils partagent une meta large (« IA », « Crypto / Solana », « Chat ») : il faut une raison précise.
 Au maximum 5 liens par nouveau coin. Aucun lien est une réponse valable.
 
+Ensuite, pour **chaque coin de `nouveaux`** et **chacune de ses metas** (champ `metas` du catalogue, avec `slug`), écris en une phrase **pourquoi ce coin appartient à ce groupe** : ce qui, dans son nom, son ticker, sa description ou sa fiche, le rattache à ce thème (ex. « Son nom et sa description présentent un influenceur IA créé sur Higgspad. »).
+
 Écris le résultat avec l'outil Write dans `work/liens-output.json` :
 
 ```json
@@ -25,9 +27,14 @@ Au maximum 5 liens par nouveau coin. Aucun lien est une réponse valable.
   "liens": [
     { "a": "mint du nouveau coin", "b": "mint d'un coin du catalogue", "type": "ecosysteme", "force": 3,
       "explication": "1 à 2 phrases : pourquoi ces deux coins sont liés et ce que ça apprend (ex. « Tous deux viennent de Higgspad, l'app d'influenceurs IA : le succès de HIGGS a entraîné ses créateurs. »)." }
+  ],
+  "groupes": [
+    { "mint": "mint du nouveau coin", "meta": "slug-de-la-meta", "pourquoi": "Une phrase : ce qui le rattache à ce groupe." }
   ]
 }
 ```
 
 `force` : 3 = lien certain et fort, 2 = lien net, 1 = rapprochement plausible (dis « probablement » dans l'explication).
 Règles : recopie les mints exactement ; ne t'appuie que sur le contenu du catalogue (pas de recherche web) ; aucun conseil d'achat ou de vente ; n'écris que ce fichier.
+
+Écris les tickers sans « $ » devant (ex. « HIGGS », pas « $HIGGS »).

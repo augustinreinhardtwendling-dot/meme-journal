@@ -162,7 +162,9 @@ async function exportLiens() {
   // Coins retenus avec une fiche, pas encore reliés par Claude Code.
   const catalogue = await sql<Record<string, unknown>[]>`
     select c.mint, c.symbol, c.name, c.journal_date::text as journal,
-      (select array_agg(m.label order by m.label) from coin_metas cm join metas m on m.slug = cm.meta where cm.mint = c.mint and m.slug <> 'autre') as metas,
+      (select json_agg(json_build_object('slug', m.slug, 'label', m.label, 'description', m.description) order by m.label)
+        from coin_metas cm join metas m on m.slug = cm.meta where cm.mint = c.mint and m.slug <> 'autre') as metas,
+      c.description,
       f.content->'catalyseur'->>'type' as catalyseur_type, f.content->'catalyseur'->>'resume' as catalyseur,
       left(f.content->>'pourquoi', 400) as pourquoi, left(f.content->'dynamique'->>'resume', 200) as trajectoire,
       f.links_at is null as nouveau

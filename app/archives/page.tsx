@@ -40,7 +40,7 @@ export default async function ArchivesPage({ searchParams }: PageProps<"/archive
               <li key={r.mint}>
                 <Link href={`/journal/${r.journal_date}`} className="flex items-baseline justify-between gap-2 px-4 py-2.5">
                   <span className="truncate">
-                    {r.name ?? "Sans nom"} <span className="font-mono text-xs text-muted">${r.symbol}</span>
+                    {r.name ?? "Sans nom"} <span className="font-mono text-xs text-muted">{r.symbol}</span>
                   </span>
                   <span className="shrink-0 text-xs text-muted">
                     {STATUS[r.status ?? ""] ?? "—"}

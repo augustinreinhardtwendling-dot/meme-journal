@@ -1,3 +1,4 @@
+import { noCashtag } from "@/lib/format";
 import type { insightsFor } from "@/lib/queries";
 
 type Insights = Awaited<ReturnType<typeof insightsFor>>;
@@ -16,7 +17,7 @@ export function WatchlistBlock({ watchlist }: { watchlist: NonNullable<Insights[
   return (
     <section className="mt-5 rounded-2xl border border-line bg-surface p-4">
       <h2 className="font-semibold">À surveiller</h2>
-      <p className="mt-1 text-sm leading-relaxed text-muted">{watchlist.resume}</p>
+      <p className="mt-1 text-sm leading-relaxed text-muted">{noCashtag(watchlist.resume)}</p>
       <ul className="mt-3 space-y-3">
         {watchlist.narratifs.map((n, i) => (
           <li key={i} className="rounded-xl bg-surface-2 p-3 text-sm">
@@ -24,7 +25,7 @@ export function WatchlistBlock({ watchlist }: { watchlist: NonNullable<Insights[
               <span className="font-medium">{n.titre}</span>
               <span className="shrink-0 text-xs text-muted">confiance {CONFIANCE[n.confiance] ?? n.confiance}</span>
             </div>
-            <p className="mt-1 leading-relaxed text-muted">{n.pourquoi}</p>
+            <p className="mt-1 leading-relaxed text-muted">{noCashtag(n.pourquoi)}</p>
             {n.evenements.length > 0 && (
               <ul className="mt-2 space-y-0.5 text-[12px]">
                 {n.evenements.map((e, j) => (
@@ -65,7 +66,7 @@ export function WeeklyRecapBlock({ recap }: { recap: NonNullable<Insights["recap
         <h3 className="text-sm font-medium">{title}</h3>
         <ul className="mt-1 list-disc space-y-0.5 pl-5 text-sm text-muted">
           {items.map((x, i) => (
-            <li key={i}>{x}</li>
+            <li key={i}>{noCashtag(x)}</li>
           ))}
         </ul>
       </div>
@@ -76,7 +77,7 @@ export function WeeklyRecapBlock({ recap }: { recap: NonNullable<Insights["recap
       {list("Faits marquants", recap.faits_marquants)}
       {list("Metas gagnantes", recap.metas_gagnantes)}
       {list("Metas en baisse", recap.metas_en_baisse)}
-      {recap.coins_marquants.length > 0 && list("Coins marquants", recap.coins_marquants.map((c) => `$${c.symbol} : ${c.pourquoi}`))}
+      {recap.coins_marquants.length > 0 && list("Coins marquants", recap.coins_marquants.map((c) => `${noCashtag(c.symbol)} : ${noCashtag(c.pourquoi)}`))}
       {list("Leçons", recap.lecons)}
     </section>
   );

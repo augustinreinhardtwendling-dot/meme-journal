@@ -192,7 +192,7 @@ export interface BrainCoin {
   pourquoi: string | null;
   catalyseur: { identifie: boolean; type: string; resume: string; sources: { titre?: string; url: string }[] } | null;
   verdict: string | null;
-  metas: { slug: string; label: string; kind: string; parent: string | null }[];
+  metas: { slug: string; label: string; kind: string; parent: string | null; reason: string | null; source: string }[];
 }
 
 export interface BrainMeta {
@@ -232,13 +232,13 @@ export async function brainData(): Promise<{ coins: BrainCoin[]; metas: BrainMet
   const mints = coins.map((c) => c.mint);
   if (!mints.length) return { coins: [], metas: [], links: [] };
 
-  const metaRows = await sql<{ mint: string; slug: string; label: string; kind: string; parent: string | null }[]>`
-    select distinct cm.mint, m.slug, m.label, m.kind, m.parent from coin_metas cm join metas m on m.slug = cm.meta
+  const metaRows = await sql<{ mint: string; slug: string; label: string; kind: string; parent: string | null; reason: string | null; source: string }[]>`
+    select cm.mint, m.slug, m.label, m.kind, m.parent, cm.reason, cm.source from coin_metas cm join metas m on m.slug = cm.meta
     where cm.mint in ${sql(mints)} and m.slug <> 'autre'`;
   const byMint = new Map<string, BrainCoin["metas"]>();
   for (const r of metaRows) {
     if (!byMint.has(r.mint)) byMint.set(r.mint, []);
-    byMint.get(r.mint)!.push({ slug: r.slug, label: r.label, kind: r.kind, parent: r.parent });
+    byMint.get(r.mint)!.push({ slug: r.slug, label: r.label, kind: r.kind, parent: r.parent, reason: r.reason, source: r.source });
   }
   const slugs = [...new Set(metaRows.map((r) => r.slug))];
   const metas = slugs.length

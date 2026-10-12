@@ -56,3 +56,5 @@ Lis `work/fiches-input.json` avec l'outil Read. Pour chaque coin de `coins` tu a
 - N'écris aucun autre fichier. Pas de commandes shell.
 
 Termine par une phrase indiquant combien de fiches sont écrites et combien de catalyseurs ont été identifiés.
+
+Écris les tickers sans « $ » devant (ex. « HIGGS », pas « $HIGGS »).

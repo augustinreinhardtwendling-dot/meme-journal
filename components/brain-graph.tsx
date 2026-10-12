@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type ForceGraphType from "force-graph";
+import { noCashtag } from "@/lib/format";
 import type { BrainCoin, BrainLink, BrainMeta } from "@/lib/queries";
 
 // ---------------------------------------------------------------------------
@@ -71,7 +72,7 @@ function buildGraph(coins: BrainCoin[], metas: BrainMeta[], links: BrainLink[]) 
     ...coins.map((c) => ({
       id: c.mint,
       type: "coin" as const,
-      label: `$${c.symbol ?? "?"}`,
+      label: c.symbol ?? "?",
       colorIdx: colorOf(primaryMeta(c)),
       r: 3 + Math.max(0, Math.min(100, c.score ?? 40)) / 22,
       coin: c,
@@ -172,6 +173,7 @@ export function BrainGraph({ coins, metas, links }: { coins: BrainCoin[]; metas:
         .backgroundColor("rgba(0,0,0,0)")
         .graphData({ nodes: graph.nodes.map((n) => ({ ...n })), links: graph.links.map((l) => ({ ...l })) })
         .nodeId("id")
+        .enableNodeDrag(false)
         .nodeLabel(() => "")
         .nodeCanvasObject((node, ctx, scale) => {
           const active = isActive(node.id);
@@ -197,8 +199,10 @@ export function BrainGraph({ coins, metas, links }: { coins: BrainCoin[]; metas:
               ctx.stroke();
             }
           }
-          // Libellés : toujours pour les metas ; pour les coins dès qu'on zoome ou qu'ils sont liés à la sélection.
-          const showLabel = node.type === "meta" || scale > 1.6 || (!!selRef.current && active);
+          // Libellés : les grands groupes (3 coins ou plus) toujours ; le reste dès qu'on zoome,
+          // ou quand le point est lié à la sélection (sinon les noms se chevauchent en vue d'ensemble).
+          const big = node.type === "meta" && (neighbors.get(node.id)?.size ?? 0) >= 3;
+          const showLabel = big || scale > (node.type === "meta" ? 1.3 : 1.8) || (!!selRef.current && active);
           if (showLabel) {
             const size = (node.type === "meta" ? 12 : 10.5) / scale;
             ctx.font = `${node.type === "meta" ? "600 " : ""}${size}px ui-sans-serif, system-ui, sans-serif`;
@@ -212,7 +216,7 @@ export function BrainGraph({ coins, metas, links }: { coins: BrainCoin[]; metas:
         .nodePointerAreaPaint((node, color, ctx) => {
           ctx.fillStyle = color;
           ctx.beginPath();
-          ctx.arc(node.x ?? 0, node.y ?? 0, node.r + 4, 0, 2 * Math.PI);
+          ctx.arc(node.x ?? 0, node.y ?? 0, node.r + 7, 0, 2 * Math.PI);
           ctx.fill();
         })
         .linkColor((l) => {
@@ -268,10 +272,23 @@ export function BrainGraph({ coins, metas, links }: { coins: BrainCoin[]; metas:
   }
 
   const sel = selected ? graph.nodes.find((n) => n.id === selected) : null;
+  const panel = sel ? (
+    sel.type === "coin" ? (
+      <CoinPanel node={sel} links={links} coins={coins} onSelect={select} />
+    ) : (
+      <MetaPanel node={sel} coins={coins} onSelect={select} />
+    )
+  ) : null;
+  const hint = (
+    <p className="rounded-2xl border border-line bg-surface p-4 text-sm leading-relaxed text-muted">
+      Touche un point pour voir pourquoi le coin a marché, pourquoi il est dans ses groupes et pourquoi il est relié aux
+      autres coins. Les cercles vides sont les groupes (metas) : touche-les pour voir leurs coins. Pince pour zoomer.
+    </p>
+  );
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[1fr_380px]">
-      <div>
+    <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_380px]">
+      <div className="min-w-0">
         <div className="mb-2 flex gap-2">
           <input
             list="brain-coins"
@@ -287,27 +304,27 @@ export function BrainGraph({ coins, metas, links }: { coins: BrainCoin[]; metas:
               <option key={n.id} value={n.label}>{n.coin?.name ?? ""}</option>
             ))}
           </datalist>
-          <button onClick={() => { select(null); fgRef.current?.zoomToFit(500, 30); }} className="rounded-lg border border-line px-3 text-sm text-muted">
-            Vue d&apos;ensemble
+          <button onClick={() => { select(null); fgRef.current?.zoomToFit(500, 30); }} className="shrink-0 rounded-lg border border-line px-3 text-sm text-muted">
+            Tout voir
           </button>
         </div>
         <div ref={boxRef} className="h-[58dvh] min-h-[360px] w-full touch-none overflow-hidden rounded-2xl border border-line bg-surface lg:h-[72dvh]" />
         <Legend top={graph.top} />
       </div>
-      <aside className="lg:max-h-[78dvh] lg:overflow-y-auto">
-        {sel ? (
-          sel.type === "coin" ? (
-            <CoinPanel node={sel} links={links} coins={coins} onSelect={select} />
-          ) : (
-            <MetaPanel node={sel} coins={coins} onSelect={select} />
-          )
-        ) : (
-          <p className="rounded-2xl border border-line bg-surface p-4 text-sm leading-relaxed text-muted">
-            Touche un point pour voir pourquoi le coin a marché et pourquoi il est relié aux autres. Les gros cercles sont les
-            metas (catégories) ; touche-les pour voir leurs coins. Pince ou fais défiler pour zoomer.
-          </p>
-        )}
-      </aside>
+      <aside className="hidden lg:block lg:max-h-[78dvh] lg:overflow-y-auto">{panel ?? hint}</aside>
+      {/* Téléphone : l'aide sous le graphe, et le détail dans un volet qui s'ouvre par-dessus. */}
+      {!panel && <div className="lg:hidden">{hint}</div>}
+      {panel && (
+        <div className="fixed inset-x-0 bottom-16 z-20 max-h-[66dvh] overflow-y-auto rounded-t-2xl border-t border-line bg-background px-3 pb-6 pt-2 shadow-[0_-8px_24px_rgba(0,0,0,0.35)] lg:hidden">
+          <div className="sticky top-0 z-10 -mx-3 mb-2 flex items-center justify-between bg-background px-3 py-1">
+            <span className="h-1 w-10 rounded-full bg-line" />
+            <button onClick={() => select(null)} className="rounded-lg border border-line px-3 py-1 text-xs text-muted">
+              Fermer
+            </button>
+          </div>
+          {panel}
+        </div>
+      )}
     </div>
   );
 }
@@ -331,6 +348,13 @@ function Legend({ top }: { top: string[] }) {
   );
 }
 
+/** Raison par défaut quand Claude n'a pas encore écrit pourquoi le coin est dans ce groupe. */
+function defaultReason(source: string) {
+  return source === "fiche"
+    ? "Rattaché à ce groupe par sa fiche (recherche web de Claude sur le coin)."
+    : "Classé ici par Claude d'après son nom, son ticker et sa description.";
+}
+
 function CoinPanel({ node, links, coins, onSelect }: { node: GNode; links: BrainLink[]; coins: BrainCoin[]; onSelect: (id: string) => void }) {
   const c = node.coin!;
   const mine = links
@@ -339,11 +363,11 @@ function CoinPanel({ node, links, coins, onSelect }: { node: GNode; links: Brain
     .filter((l) => l.other)
     .sort((x, y) => y.strength - x.strength || (x.source === "claude" ? -1 : 1));
   return (
-    <article className="space-y-4 rounded-2xl border border-line bg-surface p-4 text-sm">
+    <article className="space-y-5 rounded-2xl border border-line bg-surface p-4 text-sm">
       <header>
         <div className="flex items-baseline justify-between gap-2">
           <h2 className="text-base font-semibold">
-            {c.name ?? "Sans nom"} <span className="font-mono text-xs text-muted">${c.symbol}</span>
+            {c.name ?? "Sans nom"} <span className="font-mono text-xs text-muted">{c.symbol}</span>
           </h2>
           {c.score != null && <span className="tabular text-lg font-semibold text-accent">{c.score}</span>}
         </div>
@@ -355,28 +379,50 @@ function CoinPanel({ node, links, coins, onSelect }: { node: GNode; links: Brain
           {c.ath_mult ? ` · ATH ×${c.ath_mult.toLocaleString("fr-FR", { maximumFractionDigits: 0 })}` : ""}
           {c.tags.length ? ` · ${c.tags.join(", ")}` : ""}
         </p>
-        <div className="mt-2 flex flex-wrap gap-1">
-          {c.metas.map((m) => (
-            <button key={m.slug} onClick={() => onSelect(`meta:${m.slug}`)} className="rounded-full bg-surface-2 px-2 py-0.5 text-[11px] text-muted">
-              {m.label}
-            </button>
-          ))}
-        </div>
       </header>
 
       <section>
         <h3 className="font-medium">Pourquoi il a marché</h3>
         {c.pourquoi ? (
-          <p className="mt-1 leading-relaxed text-muted">{c.pourquoi}</p>
+          <p className="mt-1 leading-relaxed text-muted">{noCashtag(c.pourquoi)}</p>
         ) : (
           <p className="mt-1 text-xs text-warn">Fiche en attente : elle sera rédigée au prochain passage.</p>
         )}
         {c.catalyseur && (
           <p className="mt-2 text-[13px] leading-relaxed text-muted">
             <span className="font-medium text-foreground">Catalyseur : </span>
-            {c.catalyseur.resume}
+            {noCashtag(c.catalyseur.resume)}
           </p>
         )}
+      </section>
+
+      <section>
+        <h3 className="font-medium">Ses groupes ({c.metas.length})</h3>
+        <ul className="mt-2 space-y-2">
+          {c.metas.map((m) => {
+            const siblings = coins.filter((x) => x.mint !== c.mint && x.metas.some((y) => y.slug === m.slug));
+            return (
+              <li key={m.slug} className="rounded-xl bg-surface-2 p-3">
+                <div className="flex items-baseline justify-between gap-2">
+                  <button onClick={() => onSelect(`meta:${m.slug}`)} className="font-medium text-info">{m.label}</button>
+                  <span className="shrink-0 text-[11px] text-muted">{m.kind === "mecanique" ? "mécanique" : "thème"}</span>
+                </div>
+                <p className="mt-1 text-[13px] leading-relaxed text-muted">{noCashtag(m.reason) || defaultReason(m.source)}</p>
+                {siblings.length > 0 && (
+                  <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[12px]">
+                    <span className="text-muted">Aussi dans ce groupe :</span>
+                    {siblings.slice(0, 8).map((x) => (
+                      <button key={x.mint} onClick={() => onSelect(x.mint)} className="rounded-full bg-surface px-2 py-0.5 text-info">
+                        {x.symbol}
+                      </button>
+                    ))}
+                    {siblings.length > 8 && <span className="text-muted">+{siblings.length - 8}</span>}
+                  </div>
+                )}
+              </li>
+            );
+          })}
+        </ul>
       </section>
 
       <section>
@@ -387,11 +433,11 @@ function CoinPanel({ node, links, coins, onSelect }: { node: GNode; links: Brain
               <li key={i} className="rounded-xl bg-surface-2 p-3">
                 <div className="flex items-baseline justify-between gap-2">
                   <button onClick={() => onSelect(l.other!.mint)} className="font-medium text-info">
-                    ${l.other!.symbol} <span className="text-xs font-normal text-muted">{l.other!.name}</span>
+                    {l.other!.symbol} <span className="text-xs font-normal text-muted">{l.other!.name}</span>
                   </button>
                   <span className="shrink-0 text-[11px] text-muted">{LINK_KIND_LABEL[l.kind] ?? l.kind}</span>
                 </div>
-                <p className="mt-1 text-[13px] leading-relaxed text-muted">{l.explanation}</p>
+                <p className="mt-1 text-[13px] leading-relaxed text-muted">{noCashtag(l.explanation)}</p>
                 <p className="mt-1 text-[10px] uppercase tracking-wide text-muted">
                   {l.source === "claude" ? "analyse Claude" : "donnée on-chain / calcul"} · force {"●".repeat(l.strength)}
                 </p>
@@ -421,15 +467,21 @@ function MetaPanel({ node, coins, onSelect }: { node: GNode; coins: BrainCoin[];
         {m.retained_hist} retenus{rate != null ? ` (${rate.toLocaleString("fr-FR", { maximumFractionDigits: 1 })} %)` : ""}.
       </p>
       <section>
-        <h3 className="font-medium">Coins retenus de cette meta ({members.length})</h3>
-        <ul className="mt-2 flex flex-wrap gap-1.5">
-          {members.map((c) => (
-            <li key={c.mint}>
-              <button onClick={() => onSelect(c.mint)} className="rounded-full bg-surface-2 px-2.5 py-1 text-[12px] text-info">
-                ${c.symbol}
-              </button>
-            </li>
-          ))}
+        <h3 className="font-medium">Coins retenus de ce groupe ({members.length})</h3>
+        <ul className="mt-2 space-y-2">
+          {members.map((c) => {
+            const reason = c.metas.find((x) => x.slug === m.slug);
+            return (
+              <li key={c.mint} className="rounded-xl bg-surface-2 p-3">
+                <button onClick={() => onSelect(c.mint)} className="font-medium text-info">
+                  {c.symbol} <span className="text-xs font-normal text-muted">{c.name}</span>
+                </button>
+                <p className="mt-1 text-[13px] leading-relaxed text-muted">
+                  {noCashtag(reason?.reason) || defaultReason(reason?.source ?? "classification")}
+                </p>
+              </li>
+            );
+          })}
         </ul>
       </section>
     </article>

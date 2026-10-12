@@ -121,4 +121,11 @@ export const lienSchema = z.object({
 });
 export type Lien = z.infer<typeof lienSchema>;
 
-export const liensOutputSchema = z.object({ liens: z.array(z.unknown()) });
+/** Pourquoi un coin appartient à un groupe (meta). */
+export const groupeSchema = z.object({
+  mint: z.string().min(32).max(44),
+  meta: z.string().min(1).max(60),
+  pourquoi: z.string().min(10).max(300),
+});
+
+export const liensOutputSchema = z.object({ liens: z.array(z.unknown()), groupes: z.array(z.unknown()).optional() });

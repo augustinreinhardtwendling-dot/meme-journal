@@ -60,3 +60,8 @@ export function imageUrl(u: string | null | undefined): string | null {
   const cid = u.match(/\/ipfs\/(.+)$/)?.[1];
   return cid ? `https://pump.mypinata.cloud/ipfs/${cid}` : u;
 }
+
+/** Retire le « $ » placé devant les tickers (« $HIGGS » → « HIGGS ») dans les textes rédigés par Claude. */
+export function noCashtag(text: string | null | undefined): string {
+  return (text ?? "").replace(/$([A-Za-z][A-Za-z0-9_]{0,19})/g, "$1");
+}

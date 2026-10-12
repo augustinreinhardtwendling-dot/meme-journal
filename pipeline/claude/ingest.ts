@@ -13,6 +13,7 @@ import {
   classementOutputSchema,
   ficheSchema,
   fichesOutputSchema,
+  groupeSchema,
   lienSchema,
   liensOutputSchema,
   nouvelleMetaSchema,
@@ -226,6 +227,15 @@ async function ingestLiens() {
       on conflict (mint_a, mint_b, kind) do update set strength = excluded.strength, explanation = excluded.explanation, created_at = now()`;
     saved++;
   }
+  // Pourquoi chaque nouveau coin appartient à chacun de ses groupes (metas).
+  let reasons = 0;
+  for (const raw of out.data.groupes ?? []) {
+    const g = groupeSchema.safeParse(raw);
+    if (!g.success || !nouveaux.has(g.data.mint) || adviceViolations(g.data.pourquoi).length) continue;
+    const res = await sql`update coin_metas set reason = ${g.data.pourquoi} where mint = ${g.data.mint} and meta = ${g.data.meta}`;
+    reasons += res.count;
+  }
+  console.log(`groupes : ${reasons} explication(s) « pourquoi dans ce groupe » enregistrée(s)`);
   // Les nouveaux coins sont marqués traités même sans lien : « aucun lien » est une réponse valable.
   await sql`update fiches set links_at = now() where mint in ${sql([...nouveaux])}`;
   console.log(`liens : ${saved} lien(s) enregistré(s), ${rejected} rejeté(s), ${nouveaux.size} coin(s) traités`);
